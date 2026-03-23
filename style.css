@@ -249,21 +249,21 @@ body {
 .bar-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px 10px;
+    flex-wrap: wrap;
 }
 
 .bar-label {
     min-width: 100px;
+    max-width: 100%;
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .bar-track {
     flex: 1;
+    min-width: 60%;
     height: 32px;
     background: #f1f5f9;
     border-radius: 8px;
