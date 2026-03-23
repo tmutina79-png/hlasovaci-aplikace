@@ -3,7 +3,7 @@
 const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
 const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
 // CORS proxy — jsonblob.com nemá CORS hlavičky, proxy je přidá
-const BLOB_URL = `https://corsproxy.io/?url=${encodeURIComponent(BLOB_RAW)}`;
+const BLOB_URL = `https://corsproxy.io/?url=${BLOB_RAW}`;
 
 // ─── Pořadí a konfigurace otázek ───────────────────────────
 const QUESTIONS_ORDER = ["1", "2", "3", "4", "5", "6"];
@@ -56,16 +56,43 @@ function saveUserVotes() {
 }
 
 // ─── Server ────────────────────────────────────────────────
+// Zkusí proxy, pak přímo (localhost funguje bez proxy)
+const FETCH_URLS = [BLOB_URL, BLOB_RAW];
+
+async function fetchFrom(url, options = {}) {
+    const res = await fetch(url, { ...options, headers: { 'Accept': 'application/json', ...options.headers } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res;
+}
+
 async function fetchVotes() {
-    try {
-        const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error('Fetch failed');
-        serverData = await res.json();
-        return serverData;
-    } catch (err) {
-        console.error('Chyba:', err);
-        return null;
+    for (const url of FETCH_URLS) {
+        try {
+            const res = await fetchFrom(url);
+            serverData = await res.json();
+            return serverData;
+        } catch (err) {
+            console.warn(`Fetch z ${url.slice(0, 40)}… selhal:`, err.message);
+        }
     }
+    console.error('Všechny pokusy o načtení dat selhaly');
+    return null;
+}
+
+async function putData(data) {
+    for (const url of FETCH_URLS) {
+        try {
+            const res = await fetchFrom(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return true;
+        } catch (err) {
+            console.warn(`PUT na ${url.slice(0, 40)}… selhal:`, err.message);
+        }
+    }
+    return false;
 }
 
 async function sendVote(questionId, answer, oldAnswer) {
@@ -81,12 +108,8 @@ async function sendVote(questionId, answer, oldAnswer) {
         }
         q.votes[answer]++;
 
-        const res = await fetch(BLOB_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(fresh)
-        });
-        if (!res.ok) throw new Error('Save failed');
+        const ok = await putData(fresh);
+        if (!ok) throw new Error('Save failed');
 
         serverData = fresh;
         return true;
