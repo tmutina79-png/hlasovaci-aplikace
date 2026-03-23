@@ -3,183 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🗳️ Hlasovací aplikace — Workshop MGO</title>
+    <title>📊 Živé výsledky — Workshop MGO</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Hero header -->
     <header class="hero">
         <div class="floating-shapes">
             <span class="shape shape--1"></span>
             <span class="shape shape--2"></span>
             <span class="shape shape--3"></span>
         </div>
-        <div class="centered">
-            <span class="tag tag--purple">Workshop MGO 2026</span>
-            <h1 class="mega-title">
-                🗳️ Hlasovací<br>
-                <span class="gradient-text">aplikace</span>
-            </h1>
-            <p class="subtitle">Odpověz na všechny otázky a sleduj výsledky v reálném čase</p>
+        <div class="hero-inner">
+            <div class="hero-text">
+                <span class="tag tag--purple">Workshop MGO 2026</span>
+                <h1 class="mega-title">📊 Živé <span class="gradient-text">výsledky</span></h1>
+                <p class="subtitle">Naskenuj QR kód a hlasuj na svém telefonu</p>
+            </div>
+            <div class="qr-section">
+                <div class="qr-card">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://tmutina79-png.github.io/hlasovaci-aplikace/kviz" alt="QR kód pro hlasování" class="qr-img">
+                    <span class="qr-label">📱 Naskenuj a hlasuj!</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-stats">
+            <span class="live-badge">🔴 LIVE</span>
+            <span class="respondent-badge">👥 <span id="respondent-count">0</span> odpovědí</span>
         </div>
     </header>
 
-    <!-- Všechny otázky -->
-    <main class="content">
-
-        <!-- Otázka 1 -->
-        <section class="question-card" id="question-1">
-            <div class="question-header">
-                <span class="tag tag--blue">Otázka 1</span>
-                <h2 class="question-title">Už jsi někdy vytvořil aplikaci?</h2>
-            </div>
-            <div class="options options--4" id="options-1">
-                <button class="option-btn" onclick="vote(1, 'Ano')">
-                    <span class="option-icon">✅</span>
-                    <span class="option-label">Ano</span>
-                </button>
-                <button class="option-btn" onclick="vote(1, 'Zkouším')">
-                    <span class="option-icon">🔧</span>
-                    <span class="option-label">Zkouším</span>
-                </button>
-                <button class="option-btn" onclick="vote(1, 'Ne')">
-                    <span class="option-icon">❌</span>
-                    <span class="option-label">Ne</span>
-                </button>
-                <button class="option-btn" onclick="vote(1, 'Jsem profík :-)')">
-                    <span class="option-icon">🏆</span>
-                    <span class="option-label">Jsem profík :-)</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-1"></div>
-        </section>
-
-        <!-- Otázka 2 -->
-        <section class="question-card" id="question-2">
-            <div class="question-header">
-                <span class="tag tag--green">Otázka 2</span>
-                <h2 class="question-title">Víš co je Vibe Coding?</h2>
-            </div>
-            <div class="options options--2" id="options-2">
-                <button class="option-btn" onclick="vote(2, 'Ano')">
-                    <span class="option-icon">👍</span>
-                    <span class="option-label">Ano</span>
-                </button>
-                <button class="option-btn" onclick="vote(2, 'Ne')">
-                    <span class="option-icon">👎</span>
-                    <span class="option-label">Ne</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-2"></div>
-        </section>
-
-        <!-- Otázka 3 -->
-        <section class="question-card" id="question-3">
-            <div class="question-header">
-                <span class="tag tag--purple">Otázka 3</span>
-                <h2 class="question-title">Říká ti něco pojem Informační design?</h2>
-            </div>
-            <div class="options options--2" id="options-3">
-                <button class="option-btn" onclick="vote(3, 'Ano')">
-                    <span class="option-icon">👍</span>
-                    <span class="option-label">Ano</span>
-                </button>
-                <button class="option-btn" onclick="vote(3, 'Ne')">
-                    <span class="option-icon">👎</span>
-                    <span class="option-label">Ne</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-3"></div>
-        </section>
-
-        <!-- Otázka 4 -->
-        <section class="question-card" id="question-4">
-            <div class="question-header">
-                <span class="tag tag--cyan">Otázka 4</span>
-                <h2 class="question-title">Setkal jsi se někdy s pojmem VS Code nebo GitHub?</h2>
-            </div>
-            <div class="options options--4" id="options-4">
-                <button class="option-btn" onclick="vote(4, 'Jen s VS Code')">
-                    <span class="option-icon">💻</span>
-                    <span class="option-label">Jen s VS Code</span>
-                </button>
-                <button class="option-btn" onclick="vote(4, 'Jen s GitHub')">
-                    <span class="option-icon">🐙</span>
-                    <span class="option-label">Jen s GitHub</span>
-                </button>
-                <button class="option-btn" onclick="vote(4, 'Obojí znám')">
-                    <span class="option-icon">🤓</span>
-                    <span class="option-label">Obojí znám</span>
-                </button>
-                <button class="option-btn" onclick="vote(4, 'Nevím co to je')">
-                    <span class="option-icon">🤷</span>
-                    <span class="option-label">Nevím co to je</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-4"></div>
-        </section>
-
-        <!-- Otázka 5 -->
-        <section class="question-card" id="question-5">
-            <div class="question-header">
-                <span class="tag tag--orange">Otázka 5</span>
-                <h2 class="question-title">Jak dlouho myslíš, že vytvoříme pěknou designovou web stránku hypoteční kalkulačky?</h2>
-            </div>
-            <div class="options options--4" id="options-5">
-                <button class="option-btn" onclick="vote(5, 'Do 3 minut')">
-                    <span class="option-icon">⚡</span>
-                    <span class="option-label">Do 3 minut</span>
-                </button>
-                <button class="option-btn" onclick="vote(5, 'Do 5 minut')">
-                    <span class="option-icon">🕐</span>
-                    <span class="option-label">Do 5 minut</span>
-                </button>
-                <button class="option-btn" onclick="vote(5, 'Do 10 minut')">
-                    <span class="option-icon">🕙</span>
-                    <span class="option-label">Do 10 minut</span>
-                </button>
-                <button class="option-btn" onclick="vote(5, 'Nevěřím, že v této hodině vytvoříte!')">
-                    <span class="option-icon">😤</span>
-                    <span class="option-label">Nevěřím, že v této hodině vytvoříte!</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-5"></div>
-        </section>
-
-        <!-- Otázka 6 -->
-        <section class="question-card" id="question-6">
-            <div class="question-header">
-                <span class="tag tag--pink">Otázka 6</span>
-                <h2 class="question-title">Jak se ti líbil workshop?</h2>
-            </div>
-            <div class="options options--5 options--stars" id="options-6">
-                <button class="option-btn star-btn" onclick="vote(6, '⭐')">
-                    <span class="option-icon star-icon">⭐</span>
-                    <span class="option-label">1</span>
-                </button>
-                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐')">
-                    <span class="option-icon star-icon">⭐⭐</span>
-                    <span class="option-label">2</span>
-                </button>
-                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐')">
-                    <span class="option-icon star-icon">⭐⭐⭐</span>
-                    <span class="option-label">3</span>
-                </button>
-                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐⭐')">
-                    <span class="option-icon star-icon">⭐⭐⭐⭐</span>
-                    <span class="option-label">4</span>
-                </button>
-                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐⭐⭐')">
-                    <span class="option-icon star-icon">⭐⭐⭐⭐⭐</span>
-                    <span class="option-label">5</span>
-                </button>
-            </div>
-            <div class="results-bar-inline" id="results-6"></div>
-        </section>
-
+    <main class="dashboard" id="dashboard">
+        <p class="loading">Načítám výsledky…</p>
     </main>
 
     <footer class="app-footer">

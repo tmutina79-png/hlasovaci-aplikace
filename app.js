@@ -1,20 +1,21 @@
-// === Hlasovací aplikace — 6 otázek, sdílené hlasování přes jsonblob.com ===
+// === Dashboard — živé výsledky na tabuli ===
 
-// ─── Konfigurace ───────────────────────────────────────────
 const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
 const BLOB_URL = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 2000; // 2s pro živý pocit
 
-// ─── Stav aplikace ─────────────────────────────────────────
+// ─── Konfigurace otázek (titulky, barvy) ───────────────────
+const QUESTIONS = {
+    "1": { title: "Už jsi někdy vytvořil aplikaci?",               tag: "Otázka 1", tagColor: "blue",   gradient: "linear-gradient(90deg, #2563eb, #0891b2)" },
+    "2": { title: "Víš co je Vibe Coding?",                        tag: "Otázka 2", tagColor: "green",  gradient: "linear-gradient(90deg, #16a34a, #34d399)" },
+    "3": { title: "Říká ti něco pojem Informační design?",         tag: "Otázka 3", tagColor: "purple", gradient: "linear-gradient(90deg, #7c3aed, #a78bfa)" },
+    "4": { title: "Setkal jsi se s pojmem VS Code nebo GitHub?",   tag: "Otázka 4", tagColor: "cyan",   gradient: "linear-gradient(90deg, #0891b2, #22d3ee)" },
+    "5": { title: "Jak dlouho vytvoříme web kalkulačky?",           tag: "Otázka 5", tagColor: "orange", gradient: "linear-gradient(90deg, #ea580c, #fb923c)" },
+    "6": { title: "Jak se ti líbil workshop?",                      tag: "Otázka 6", tagColor: "pink",   gradient: "linear-gradient(90deg, #db2777, #f472b6)" }
+};
+
 let serverData = null;
-let isSaving = false;
-
-// userVotes: { "1": { answer: "Ano", changed: false }, ... }
-const userVotes = JSON.parse(localStorage.getItem('votingApp_userVotes') || '{}');
-
-function saveUserVotes() {
-    localStorage.setItem('votingApp_userVotes', JSON.stringify(userVotes));
-}
+let dashboardBuilt = false;
 
 // ─── Komunikace se serverem ────────────────────────────────
 async function fetchVotes() {
@@ -24,210 +25,135 @@ async function fetchVotes() {
         serverData = await res.json();
         return serverData;
     } catch (err) {
-        console.error('Chyba při načítání hlasů:', err);
+        console.error('Chyba:', err);
         return null;
     }
 }
 
-/**
- * Atomic read-modify-write: přičte +1 k answer, případně -1 od oldAnswer
- */
-async function saveVote(questionId, answer, oldAnswer) {
-    if (isSaving) return false;
-    isSaving = true;
-    try {
-        const fresh = await fetchVotes();
-        if (!fresh) throw new Error('Cannot read current data');
-
-        const q = fresh.questions[questionId];
-        if (oldAnswer && q.votes[oldAnswer] > 0) {
-            q.votes[oldAnswer]--;
-        }
-        q.votes[answer]++;
-
-        const res = await fetch(BLOB_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(fresh)
-        });
-        if (!res.ok) throw new Error('Save failed');
-
-        serverData = fresh;
-        return true;
-    } catch (err) {
-        console.error('Chyba při ukládání hlasu:', err);
-        return false;
-    } finally {
-        isSaving = false;
-    }
-}
-
-// ─── Hlasování ─────────────────────────────────────────────
-async function vote(questionId, answer) {
-    const qKey = String(questionId);
-    const existing = userVotes[qKey];
-
-    // Pokud už hlasoval a už jednou změnil → nic
-    if (existing && existing.changed) return;
-
-    // Pokud hlasuje znovu stejně → nic
-    if (existing && existing.answer === answer) return;
-
-    const isChange = !!existing;
-    const oldAnswer = isChange ? existing.answer : null;
-
-    // Okamžitý vizuální feedback
-    applyButtonStates(qKey, answer, isChange);
-
-    const success = await saveVote(qKey, answer, oldAnswer);
-
-    if (success) {
-        userVotes[qKey] = {
-            answer: answer,
-            changed: isChange ? true : false
-        };
-        saveUserVotes();
-        renderResults(qKey);
-        applyButtonStates(qKey, answer, false);
-    } else {
-        // Rollback
-        if (existing) {
-            applyButtonStates(qKey, existing.answer, !existing.changed);
-        } else {
-            clearButtonStates(qKey);
-        }
-        alert('Chyba při odesílání hlasu. Zkus to znovu.');
-    }
-}
-
-// ─── UI: tlačítka ──────────────────────────────────────────
-function applyButtonStates(questionId, votedAnswer, canChange) {
-    const container = document.getElementById(`options-${questionId}`);
-    if (!container) return;
-
-    const buttons = container.querySelectorAll('.option-btn');
-    buttons.forEach(btn => {
-        const label = btn.querySelector('.option-label').textContent;
-
-        // Resetuj třídy
-        btn.classList.remove('voted', 'not-selected', 'can-change', 'can-change-others', 'vote-animation');
-
-        if (label === votedAnswer) {
-            btn.classList.add('voted');
-            if (canChange) btn.classList.add('can-change');
-        } else {
-            if (canChange) {
-                btn.classList.add('can-change-others');
-            } else {
-                btn.classList.add('not-selected');
-            }
-        }
-    });
-
-    // Zobrazit výsledky
-    const resultsEl = document.getElementById(`results-${questionId}`);
-    if (resultsEl) resultsEl.classList.add('visible');
-}
-
-function clearButtonStates(questionId) {
-    const container = document.getElementById(`options-${questionId}`);
-    if (!container) return;
-    container.querySelectorAll('.option-btn').forEach(btn => {
-        btn.classList.remove('voted', 'not-selected', 'can-change', 'can-change-others', 'vote-animation');
-    });
-    const resultsEl = document.getElementById(`results-${questionId}`);
-    if (resultsEl) resultsEl.classList.remove('visible');
-}
-
-// ─── UI: inline výsledky ───────────────────────────────────
-function renderResults(questionId) {
-    if (!serverData || !serverData.questions[questionId]) return;
-
-    const data = serverData.questions[questionId];
-    const resultsEl = document.getElementById(`results-${questionId}`);
-    if (!resultsEl) return;
-
-    const totalVotes = Object.values(data.votes).reduce((s, c) => s + c, 0);
+// ─── Sestavení dashboard karet ─────────────────────────────
+function buildDashboard() {
+    const container = document.getElementById('dashboard');
+    if (!serverData) return;
 
     let html = '';
-    data.options.forEach(option => {
-        const count = data.votes[option];
-        const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+    for (const qId in QUESTIONS) {
+        const cfg = QUESTIONS[qId];
+        const data = serverData.questions[qId];
+        if (!data) continue;
 
-        html += `
-            <div class="result-row">
-                <span class="result-row-label">${option}</span>
-                <div class="result-row-bar">
-                    <div class="result-row-fill" style="width: ${pct}%"></div>
-                    <span class="result-row-count">${count} (${Math.round(pct)}%)</span>
-                </div>
-            </div>
-        `;
-    });
+        const totalVotes = Object.values(data.votes).reduce((s, c) => s + c, 0);
 
-    html += `<div class="result-row-total">Celkem: ${totalVotes} hlasů</div>`;
-    resultsEl.innerHTML = html;
+        html += `<section class="dash-card" id="dash-${qId}">`;
+        html += `  <div class="dash-header">`;
+        html += `    <span class="tag tag--${cfg.tagColor}">${cfg.tag}</span>`;
+        html += `    <span class="dash-count" id="count-${qId}">${totalVotes} hlasů</span>`;
+        html += `  </div>`;
+        html += `  <h3 class="dash-title">${cfg.title}</h3>`;
+        html += `  <div class="dash-bars">`;
 
-    // Pokud uživatel hlasoval, zobraz
-    if (userVotes[questionId]) {
-        resultsEl.classList.add('visible');
+        data.options.forEach((option, idx) => {
+            const count = data.votes[option];
+            const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+
+            html += `<div class="bar-row">`;
+            html += `  <span class="bar-label">${option}</span>`;
+            html += `  <div class="bar-track">`;
+            html += `    <div class="bar-fill" id="fill-${qId}-${idx}" style="width:${pct}%;background:${cfg.gradient}"></div>`;
+            html += `    <span class="bar-value" id="val-${qId}-${idx}">${count} (${Math.round(pct)}%)</span>`;
+            html += `  </div>`;
+            html += `</div>`;
+        });
+
+        html += `  </div>`;
+        html += `</section>`;
     }
+
+    container.innerHTML = html;
+    dashboardBuilt = true;
 }
 
-function renderAllResults() {
-    if (!serverData) return;
+// ─── Aktualizace barů (bez rebuildu DOM) ───────────────────
+function updateDashboard() {
+    if (!serverData || !dashboardBuilt) {
+        buildDashboard();
+        return;
+    }
+
+    let totalRespondents = 0;
+
     for (const qId in serverData.questions) {
-        renderResults(qId);
-    }
-}
+        const data = serverData.questions[qId];
+        const totalVotes = Object.values(data.votes).reduce((s, c) => s + c, 0);
+        if (qId === "1") totalRespondents = totalVotes;
 
-// ─── Obnova stavu po refreshi ──────────────────────────────
-function restoreUserVotes() {
-    for (const qId in userVotes) {
-        const { answer, changed } = userVotes[qId];
-        applyButtonStates(qId, answer, !changed);
+        // Aktualizovat počet hlasů
+        const countEl = document.getElementById(`count-${qId}`);
+        if (countEl) countEl.textContent = `${totalVotes} hlasů`;
+
+        // Aktualizovat bary
+        data.options.forEach((option, idx) => {
+            const count = data.votes[option];
+            const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+
+            const fill = document.getElementById(`fill-${qId}-${idx}`);
+            const val = document.getElementById(`val-${qId}-${idx}`);
+
+            if (fill) {
+                const oldPct = parseFloat(fill.style.width) || 0;
+                fill.style.width = `${pct}%`;
+
+                // Pulzní animace při změně
+                if (Math.abs(pct - oldPct) > 0.5) {
+                    fill.classList.add('bar-pulse');
+                    setTimeout(() => fill.classList.remove('bar-pulse'), 500);
+                }
+            }
+            if (val) val.textContent = `${count} (${Math.round(pct)}%)`;
+        });
     }
+
+    // Aktualizovat počet respondentů
+    const el = document.getElementById('respondent-count');
+    if (el) el.textContent = totalRespondents;
 }
 
 // ─── Polling ───────────────────────────────────────────────
 async function pollResults() {
     await fetchVotes();
-    renderAllResults();
+    updateDashboard();
 }
 
 // ─── Reset ─────────────────────────────────────────────────
 async function resetAll() {
-    if (!confirm('Opravdu chceš resetovat VŠECHNY hlasy? Toto smaže hlasy všech uživatelů.')) return;
+    if (!confirm('Opravdu chceš resetovat VŠECHNY hlasy?')) return;
 
     try {
-        const freshData = await fetchVotes();
-        if (!freshData) return;
+        const fresh = await fetchVotes();
+        if (!fresh) return;
 
-        for (const qId in freshData.questions) {
-            const q = freshData.questions[qId];
-            for (const opt of q.options) {
-                q.votes[opt] = 0;
+        for (const qId in fresh.questions) {
+            for (const opt of fresh.questions[qId].options) {
+                fresh.questions[qId].votes[opt] = 0;
             }
         }
 
         await fetch(BLOB_URL, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(freshData)
+            body: JSON.stringify(fresh)
         });
 
-        localStorage.removeItem('votingApp_userVotes');
         location.reload();
     } catch (err) {
-        alert('Chyba při resetování: ' + err.message);
+        alert('Chyba: ' + err.message);
     }
 }
 
 // ─── Inicializace ──────────────────────────────────────────
 async function init() {
     await fetchVotes();
-    renderAllResults();
-    restoreUserVotes();
+    buildDashboard();
+    updateDashboard();
     setInterval(pollResults, POLL_INTERVAL);
 }
 

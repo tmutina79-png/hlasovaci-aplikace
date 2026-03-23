@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🗳️ Kvíz — Workshop MGO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Progress bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <header class="quiz-header">
+        <span class="tag tag--purple">Workshop MGO 2026</span>
+        <span class="progress-label" id="progress-label">Otázka 1 / 6</span>
+    </header>
+
+    <!-- Quiz area — jedna otázka najednou -->
+    <main class="quiz-area" id="quiz-area">
+        <p class="quiz-loading">Načítám otázky…</p>
+    </main>
+
+    <!-- Hotovo -->
+    <div class="done-screen" id="done-screen">
+        <span class="done-emoji">🎉</span>
+        <h2 class="done-title">Díky za odpovědi!</h2>
+        <p class="done-subtitle">Výsledky se zobrazují na tabuli v reálném čase</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
