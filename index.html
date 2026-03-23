@@ -23,7 +23,7 @@
                 <p class="subtitle">Naskenuj QR kód a hlasuj na svém telefonu</p>
             </div>
             <div class="qr-section">
-                <div class="qr-card" onclick="document.getElementById('qr-overlay').classList.add('visible')" style="cursor:pointer">
+                <div class="qr-card">
                     <img
                         src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&amp;data=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz"
                         onerror="this.onerror=null;this.src='https://quickchart.io/qr?text=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz&size=300'"
@@ -50,21 +50,6 @@
         <p>Workshop MGO &copy; 2026 &middot; Vibe Coding 🎵</p>
         <button class="reset-btn" onclick="resetAll()">🔄 Resetovat hlasování</button>
     </footer>
-
-    <!-- QR Modal Overlay -->
-    <div id="qr-overlay" class="qr-overlay" onclick="this.classList.remove('visible')">
-        <div class="qr-modal" onclick="event.stopPropagation()">
-            <button class="qr-modal-close" onclick="document.getElementById('qr-overlay').classList.remove('visible')">&times;</button>
-            <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&amp;data=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz"
-                onerror="this.onerror=null;this.src='https://quickchart.io/qr?text=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz&size=600'"
-                alt="QR kód"
-                class="qr-modal-img"
-            >
-            <p class="qr-modal-label">📱 Naskenuj a hlasuj!</p>
-            <p class="qr-modal-url">tmutina79-png.github.io/hlasovaci-aplikace/kviz</p>
-        </div>
-    </div>
 
     <script src="app.js"></script>
 </body>
