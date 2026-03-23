@@ -23,7 +23,7 @@
                 <p class="subtitle">Naskenuj QR kód a hlasuj na svém telefonu</p>
             </div>
             <div class="qr-section">
-                <div class="qr-card" onclick="document.getElementById('qr-overlay').classList.add('visible')" style="cursor:pointer">
+                <div class="qr-card">
                     <img
                         src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&amp;data=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz"
                         onerror="this.onerror=null;this.src='https://quickchart.io/qr?text=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz&size=300'"
@@ -40,20 +40,6 @@
             <span class="live-badge">🔴 LIVE</span>
         </div>
     </header>
-
-    <!-- QR Fullscreen Overlay -->
-    <div id="qr-overlay" class="qr-overlay" onclick="this.classList.remove('visible')">
-        <div class="qr-overlay-content">
-            <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&amp;data=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz"
-                onerror="this.onerror=null;this.src='https://quickchart.io/qr?text=https%3A%2F%2Ftmutina79-png.github.io%2Fhlasovaci-aplikace%2Fkviz&size=600'"
-                alt="QR kód"
-                class="qr-overlay-img"
-            >
-            <p class="qr-overlay-url">tmutina79-png.github.io/hlasovaci-aplikace/kviz</p>
-            <p class="qr-overlay-hint">Klikni kamkoliv pro zavření</p>
-        </div>
-    </div>
 
     <main class="dashboard" id="dashboard">
         <p class="loading">Načítám výsledky…</p>
