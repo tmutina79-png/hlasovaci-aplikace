@@ -32,7 +32,7 @@ const QUESTIONS = {
     "5": {
         title: "Jak dlouho myslíš, že vytvoříme pěknou designovou web stránku hypoteční kalkulačky?",
         tag: "Otázka 5", tagColor: "orange",
-        icons: { "Do 3 minut": "⚡", "Do 5 minut": "🕐", "Do 10 minut": "🕙", "Nevěřím, že v této hodině vytvoříte!": "😤" }
+        icons: { "Do 3 minut": "⚡", "Do 5 minut": "🕐", "Do 10 minut": "🕙", "Nevěřím, že se to tomu žvatlalovi podaří!": "😤" }
     },
     "6": {
         title: "Jak se ti líbil workshop?",
