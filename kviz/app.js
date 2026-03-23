@@ -215,12 +215,15 @@ function renderQuestion(qId) {
         const safeAnswer = encodeURIComponent(option);
 
         html += `<button class="quiz-option${starClass}${stateClass}" data-answer="${safeAnswer}" onclick="selectAnswer('${qId}', decodeURIComponent(this.dataset.answer))">`;
-        html += `  <span class="quiz-option-icon">${icon}</span>`;
 
-        if (!isStars) {
-            html += `  <span class="quiz-option-label">${option}</span>`;
+        if (isStars) {
+            // Zobrazit hvězdičky jako řadu malých ⭐ podle pořadí
+            const starCount = idx + 1;
+            html += `  <span class="quiz-option-icon">${'⭐'.repeat(starCount)}</span>`;
+            html += `  <span class="quiz-option-label">${starCount}</span>`;
         } else {
-            html += `  <span class="quiz-option-label">${idx + 1}</span>`;
+            html += `  <span class="quiz-option-icon">${icon}</span>`;
+            html += `  <span class="quiz-option-label">${option}</span>`;
         }
 
         html += `</button>`;
