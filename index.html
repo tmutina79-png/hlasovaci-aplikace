@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗳️ Hlasovací aplikace — Workshop MGO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Hero header -->
+    <header class="hero">
+        <div class="floating-shapes">
+            <span class="shape shape--1"></span>
+            <span class="shape shape--2"></span>
+            <span class="shape shape--3"></span>
+        </div>
+        <div class="centered">
+            <span class="tag tag--purple">Workshop MGO 2026</span>
+            <h1 class="mega-title">
+                🗳️ Hlasovací<br>
+                <span class="gradient-text">aplikace</span>
+            </h1>
+            <p class="subtitle">Odpověz na otázky a podívej se na výsledky v reálném čase</p>
+        </div>
+    </header>
+
+    <!-- Otázky -->
+    <main class="content">
+
+        <!-- Otázka 1 -->
+        <section class="question-card" id="question-1">
+            <div class="question-header centered">
+                <span class="tag tag--blue">Otázka 1</span>
+                <h2 class="slide-title">Už jsi někdy vytvořil nějakou aplikaci?</h2>
+                <p class="slide-subtitle">Vyber jednu z možností níže</p>
+            </div>
+
+            <div class="options" id="options-1">
+                <button class="card option-btn" onclick="vote(1, 'Ano')">
+                    <span class="card__icon">✅</span>
+                    <h3 class="card__title">Ano</h3>
+                    <p class="card__text">Už mám něco za sebou</p>
+                </button>
+                <button class="card option-btn" onclick="vote(1, 'Zkouším')">
+                    <span class="card__icon">🔧</span>
+                    <h3 class="card__title">Zkouším</h3>
+                    <p class="card__text">Právě se učím</p>
+                </button>
+                <button class="card option-btn" onclick="vote(1, 'Ne')">
+                    <span class="card__icon">❌</span>
+                    <h3 class="card__title">Ne</h3>
+                    <p class="card__text">Zatím jsem nic netvořil/a</p>
+                </button>
+                <button class="card option-btn" onclick="vote(1, 'Jsem profík :-)')">
+                    <span class="card__icon">🏆</span>
+                    <h3 class="card__title">Jsem profík :-)</h3>
+                    <p class="card__text">Dělám to profesionálně</p>
+                </button>
+            </div>
+
+            <div class="results-panel" id="results-1">
+                <h3 class="results-title">📋 Výsledky hlasování</h3>
+                <div class="results-list" id="results-list-1"></div>
+                <div class="total-votes" id="total-1">Celkem hlasů: 0</div>
+            </div>
+        </section>
+
+        <!-- Sem přijdou další otázky -->
+
+    </main>
+
+    <footer class="app-footer">
+        <p>Workshop MGO &copy; 2026 &middot; Vibe Coding 🎵</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
