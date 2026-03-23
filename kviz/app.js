@@ -60,16 +60,47 @@ function getLocalResetTs() {
     return parseInt(localStorage.getItem('quiz_resetTimestamp') || '0');
 }
 
+/**
+ * Vrací true pokud byl detekován reset.
+ * Vyčistí userVotes v paměti i localStorage.
+ * NEVOLÁ location.reload() — to nechává na volajícím.
+ */
 function checkForReset() {
-    if (!serverData || !serverData.resetTimestamp) return;
-    const serverTs = serverData.resetTimestamp;
-    const localTs = getLocalResetTs();
-    if (serverTs > localTs) {
-        // Dashboard provedl reset → smazat hlasy a restartovat kvíz
-        localStorage.setItem('quiz_resetTimestamp', String(serverTs));
-        localStorage.removeItem('quiz_userVotes');
-        location.reload();
+    if (!serverData) return false;
+    let resetDetected = false;
+
+    // Metoda 1: resetTimestamp se změnil
+    if (serverData.resetTimestamp) {
+        const serverTs = serverData.resetTimestamp;
+        const localTs = getLocalResetTs();
+        if (serverTs > localTs) {
+            resetDetected = true;
+        }
     }
+
+    // Metoda 2 (záložní): server má nulové hlasy, ale uživatel má lokální
+    if (!resetDetected && Object.keys(userVotes).length > 0) {
+        let allZero = true;
+        for (const qId in serverData.questions) {
+            const total = Object.values(serverData.questions[qId].votes)
+                .reduce((s, c) => s + c, 0);
+            if (total > 0) { allZero = false; break; }
+        }
+        if (allZero) resetDetected = true;
+    }
+
+    if (resetDetected) {
+        // Vyčistit lokální stav
+        localStorage.removeItem('quiz_userVotes');
+        userVotes = {};
+        currentQIndex = 0;
+        hasChangedCurrent = false;
+        if (serverData.resetTimestamp) {
+            localStorage.setItem('quiz_resetTimestamp', String(serverData.resetTimestamp));
+        }
+    }
+
+    return resetDetected;
 }
 
 // ─── Server ────────────────────────────────────────────────
@@ -312,6 +343,7 @@ async function init() {
     }
 
     // Zkontroluj, jestli dashboard neprovedl reset
+    // (vyčistí userVotes v paměti, žádný reload — init pokračuje s čistým stavem)
     checkForReset();
 
     // Najdi první nezodpovězenou otázku
@@ -332,7 +364,10 @@ async function init() {
     // Periodicky kontroluj, jestli dashboard neprovedl reset
     setInterval(async () => {
         await fetchVotes();
-        checkForReset();
+        if (checkForReset()) {
+            // Reset detekován za běhu → reload pro čistý restart UI
+            location.reload();
+        }
     }, 5000);
 }
 
