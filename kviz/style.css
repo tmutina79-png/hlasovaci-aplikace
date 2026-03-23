@@ -153,8 +153,9 @@ body {
 
 .quiz-options--stars {
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: center;
 }
 
 .quiz-option {
@@ -194,14 +195,16 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-width: 56px;
-    padding: 14px 8px;
-    gap: 4px;
+    min-width: 0;
+    padding: 12px 6px;
+    gap: 6px;
 }
 
 .quiz-option--star .quiz-option-icon {
-    font-size: 1rem;
-    line-height: 1;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    letter-spacing: 0.15em;
+    white-space: nowrap;
 }
 
 .quiz-option--star .quiz-option-label {
