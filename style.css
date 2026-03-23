@@ -119,6 +119,69 @@ body {
     padding: 20px;
     text-align: center;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qr-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 32px rgba(0,0,0,0.12);
+}
+
+/* ═══════════════════════════════════════════
+   QR FULLSCREEN OVERLAY
+═══════════════════════════════════════════ */
+.qr-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.qr-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.qr-overlay-content {
+    text-align: center;
+    animation: qrZoomIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes qrZoomIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.qr-overlay-img {
+    width: min(80vmin, 500px);
+    height: min(80vmin, 500px);
+    border-radius: 20px;
+    background: white;
+    padding: 24px;
+    image-rendering: pixelated;
+}
+
+.qr-overlay-url {
+    margin-top: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.02em;
+}
+
+.qr-overlay-hint {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    font-weight: 500;
 }
 
 .qr-img {
