@@ -179,6 +179,25 @@ body {
     color: var(--text-secondary);
 }
 
+.quiz-link-btn {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 100px;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.25);
+}
+
+.quiz-link-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+}
+
 /* ═══════════════════════════════════════════
    DASHBOARD GRID
 ═══════════════════════════════════════════ */
