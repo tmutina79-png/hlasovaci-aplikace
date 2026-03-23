@@ -186,6 +186,43 @@ async function pollResults() {
 }
 
 /**
+ * Reset všech hlasů (server + lokální)
+ */
+async function resetAll() {
+    if (!confirm('Opravdu chceš resetovat VŠECHNY hlasy? Toto smaže hlasy všech uživatelů.')) return;
+
+    try {
+        // Vytvořit čistá data s nulami
+        const freshData = await fetchVotes();
+        if (!freshData) return;
+
+        for (const qId in freshData.questions) {
+            const q = freshData.questions[qId];
+            for (const opt of q.options) {
+                q.votes[opt] = 0;
+            }
+        }
+
+        // Uložit na server
+        await fetch(BLOB_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(freshData)
+        });
+
+        // Smazat lokální hlasování
+        localStorage.removeItem('votingApp_userVotes');
+        // Reload stránky
+        location.reload();
+    } catch (err) {
+        alert('Chyba při resetování: ' + err.message);
+    }
+}
+
+/**
  * Inicializace aplikace
  */
 async function init() {

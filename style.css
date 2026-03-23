@@ -377,6 +377,29 @@ body {
 }
 
 /* ═══════════════════════════════════════════
+   RESET BUTTON
+═══════════════════════════════════════════ */
+.reset-btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    border-radius: 100px;
+    border: 2px solid var(--border);
+    background: #ffffff;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.reset-btn:hover {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+    background: #fef2f2;
+}
+
+/* ═══════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════ */
 @media (max-width: 600px) {
