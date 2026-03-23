@@ -23,76 +23,162 @@
                 🗳️ Hlasovací<br>
                 <span class="gradient-text">aplikace</span>
             </h1>
-            <p class="subtitle">Odpověz na otázky a podívej se na výsledky v reálném čase</p>
-        </div>
-
-        <!-- Výsledková políčka v záhlaví -->
-        <div class="hero-results" id="hero-results-1">
-            <div class="hero-result-card" data-option="Ano">
-                <span class="hero-result-icon">✅</span>
-                <span class="hero-result-label">Ano</span>
-                <span class="hero-result-count" id="hero-count-1-Ano">0</span>
-            </div>
-            <div class="hero-result-card" data-option="Zkouším">
-                <span class="hero-result-icon">🔧</span>
-                <span class="hero-result-label">Zkouším</span>
-                <span class="hero-result-count" id="hero-count-1-Zkouším">0</span>
-            </div>
-            <div class="hero-result-card" data-option="Ne">
-                <span class="hero-result-icon">❌</span>
-                <span class="hero-result-label">Ne</span>
-                <span class="hero-result-count" id="hero-count-1-Ne">0</span>
-            </div>
-            <div class="hero-result-card" data-option="Jsem profík :-)">
-                <span class="hero-result-icon">🏆</span>
-                <span class="hero-result-label">Jsem profík :-)</span>
-                <span class="hero-result-count" id="hero-count-1-profik">0</span>
-            </div>
+            <p class="subtitle">Odpověz na všechny otázky a sleduj výsledky v reálném čase</p>
         </div>
     </header>
 
-    <!-- Otázky -->
+    <!-- Všechny otázky -->
     <main class="content">
 
         <!-- Otázka 1 -->
         <section class="question-card" id="question-1">
-            <div class="question-header centered">
+            <div class="question-header">
                 <span class="tag tag--blue">Otázka 1</span>
-                <h2 class="slide-title">Už jsi někdy vytvořil nějakou aplikaci?</h2>
-                <p class="slide-subtitle">Vyber jednu z možností níže</p>
+                <h2 class="question-title">Už jsi někdy vytvořil aplikaci?</h2>
             </div>
-
-            <div class="options" id="options-1">
-                <button class="card option-btn" onclick="vote(1, 'Ano')">
-                    <span class="card__icon">✅</span>
-                    <h3 class="card__title">Ano</h3>
-                    <p class="card__text">Už mám něco za sebou</p>
+            <div class="options options--4" id="options-1">
+                <button class="option-btn" onclick="vote(1, 'Ano')">
+                    <span class="option-icon">✅</span>
+                    <span class="option-label">Ano</span>
                 </button>
-                <button class="card option-btn" onclick="vote(1, 'Zkouším')">
-                    <span class="card__icon">🔧</span>
-                    <h3 class="card__title">Zkouším</h3>
-                    <p class="card__text">Právě se učím</p>
+                <button class="option-btn" onclick="vote(1, 'Zkouším')">
+                    <span class="option-icon">🔧</span>
+                    <span class="option-label">Zkouším</span>
                 </button>
-                <button class="card option-btn" onclick="vote(1, 'Ne')">
-                    <span class="card__icon">❌</span>
-                    <h3 class="card__title">Ne</h3>
-                    <p class="card__text">Zatím jsem nic netvořil/a</p>
+                <button class="option-btn" onclick="vote(1, 'Ne')">
+                    <span class="option-icon">❌</span>
+                    <span class="option-label">Ne</span>
                 </button>
-                <button class="card option-btn" onclick="vote(1, 'Jsem profík :-)')">
-                    <span class="card__icon">🏆</span>
-                    <h3 class="card__title">Jsem profík :-)</h3>
-                    <p class="card__text">Dělám to profesionálně</p>
+                <button class="option-btn" onclick="vote(1, 'Jsem profík :-)')">
+                    <span class="option-icon">🏆</span>
+                    <span class="option-label">Jsem profík :-)</span>
                 </button>
             </div>
-
-            <div class="results-panel" id="results-1">
-                <h3 class="results-title">📋 Výsledky hlasování</h3>
-                <div class="results-list" id="results-list-1"></div>
-                <div class="total-votes" id="total-1">Celkem hlasů: 0</div>
-            </div>
+            <div class="results-bar-inline" id="results-1"></div>
         </section>
 
-        <!-- Sem přijdou další otázky -->
+        <!-- Otázka 2 -->
+        <section class="question-card" id="question-2">
+            <div class="question-header">
+                <span class="tag tag--green">Otázka 2</span>
+                <h2 class="question-title">Víš co je Vibe Coding?</h2>
+            </div>
+            <div class="options options--2" id="options-2">
+                <button class="option-btn" onclick="vote(2, 'Ano')">
+                    <span class="option-icon">👍</span>
+                    <span class="option-label">Ano</span>
+                </button>
+                <button class="option-btn" onclick="vote(2, 'Ne')">
+                    <span class="option-icon">👎</span>
+                    <span class="option-label">Ne</span>
+                </button>
+            </div>
+            <div class="results-bar-inline" id="results-2"></div>
+        </section>
+
+        <!-- Otázka 3 -->
+        <section class="question-card" id="question-3">
+            <div class="question-header">
+                <span class="tag tag--purple">Otázka 3</span>
+                <h2 class="question-title">Říká ti něco pojem Informační design?</h2>
+            </div>
+            <div class="options options--2" id="options-3">
+                <button class="option-btn" onclick="vote(3, 'Ano')">
+                    <span class="option-icon">👍</span>
+                    <span class="option-label">Ano</span>
+                </button>
+                <button class="option-btn" onclick="vote(3, 'Ne')">
+                    <span class="option-icon">👎</span>
+                    <span class="option-label">Ne</span>
+                </button>
+            </div>
+            <div class="results-bar-inline" id="results-3"></div>
+        </section>
+
+        <!-- Otázka 4 -->
+        <section class="question-card" id="question-4">
+            <div class="question-header">
+                <span class="tag tag--cyan">Otázka 4</span>
+                <h2 class="question-title">Setkal jsi se někdy s pojmem VS Code nebo GitHub?</h2>
+            </div>
+            <div class="options options--4" id="options-4">
+                <button class="option-btn" onclick="vote(4, 'Jen s VS Code')">
+                    <span class="option-icon">💻</span>
+                    <span class="option-label">Jen s VS Code</span>
+                </button>
+                <button class="option-btn" onclick="vote(4, 'Jen s GitHub')">
+                    <span class="option-icon">🐙</span>
+                    <span class="option-label">Jen s GitHub</span>
+                </button>
+                <button class="option-btn" onclick="vote(4, 'Obojí znám')">
+                    <span class="option-icon">🤓</span>
+                    <span class="option-label">Obojí znám</span>
+                </button>
+                <button class="option-btn" onclick="vote(4, 'Nevím co to je')">
+                    <span class="option-icon">🤷</span>
+                    <span class="option-label">Nevím co to je</span>
+                </button>
+            </div>
+            <div class="results-bar-inline" id="results-4"></div>
+        </section>
+
+        <!-- Otázka 5 -->
+        <section class="question-card" id="question-5">
+            <div class="question-header">
+                <span class="tag tag--orange">Otázka 5</span>
+                <h2 class="question-title">Jak dlouho myslíš, že vytvoříme pěknou designovou web stránku hypoteční kalkulačky?</h2>
+            </div>
+            <div class="options options--4" id="options-5">
+                <button class="option-btn" onclick="vote(5, 'Do 3 minut')">
+                    <span class="option-icon">⚡</span>
+                    <span class="option-label">Do 3 minut</span>
+                </button>
+                <button class="option-btn" onclick="vote(5, 'Do 5 minut')">
+                    <span class="option-icon">🕐</span>
+                    <span class="option-label">Do 5 minut</span>
+                </button>
+                <button class="option-btn" onclick="vote(5, 'Do 10 minut')">
+                    <span class="option-icon">🕙</span>
+                    <span class="option-label">Do 10 minut</span>
+                </button>
+                <button class="option-btn" onclick="vote(5, 'Nevěřím, že v této hodině vytvoříte!')">
+                    <span class="option-icon">😤</span>
+                    <span class="option-label">Nevěřím, že v této hodině vytvoříte!</span>
+                </button>
+            </div>
+            <div class="results-bar-inline" id="results-5"></div>
+        </section>
+
+        <!-- Otázka 6 -->
+        <section class="question-card" id="question-6">
+            <div class="question-header">
+                <span class="tag tag--pink">Otázka 6</span>
+                <h2 class="question-title">Jak se ti líbil workshop?</h2>
+            </div>
+            <div class="options options--5 options--stars" id="options-6">
+                <button class="option-btn star-btn" onclick="vote(6, '⭐')">
+                    <span class="option-icon star-icon">⭐</span>
+                    <span class="option-label">1</span>
+                </button>
+                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐')">
+                    <span class="option-icon star-icon">⭐⭐</span>
+                    <span class="option-label">2</span>
+                </button>
+                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐')">
+                    <span class="option-icon star-icon">⭐⭐⭐</span>
+                    <span class="option-label">3</span>
+                </button>
+                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐⭐')">
+                    <span class="option-icon star-icon">⭐⭐⭐⭐</span>
+                    <span class="option-label">4</span>
+                </button>
+                <button class="option-btn star-btn" onclick="vote(6, '⭐⭐⭐⭐⭐')">
+                    <span class="option-icon star-icon">⭐⭐⭐⭐⭐</span>
+                    <span class="option-label">5</span>
+                </button>
+            </div>
+            <div class="results-bar-inline" id="results-6"></div>
+        </section>
 
     </main>
 
