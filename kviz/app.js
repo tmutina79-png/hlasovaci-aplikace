@@ -49,10 +49,27 @@ let currentQIndex = 0;
 let hasChangedCurrent = false; // použil jednu změnu na aktuální otázce?
 
 // localStorage: { "1": "Ano", "2": "Ne", ... }
-const userVotes = JSON.parse(localStorage.getItem('quiz_userVotes') || '{}');
+let userVotes = JSON.parse(localStorage.getItem('quiz_userVotes') || '{}');
 
 function saveUserVotes() {
     localStorage.setItem('quiz_userVotes', JSON.stringify(userVotes));
+}
+
+// ─── Detekce resetu z dashboardu ───────────────────────────
+function getLocalResetTs() {
+    return parseInt(localStorage.getItem('quiz_resetTimestamp') || '0');
+}
+
+function checkForReset() {
+    if (!serverData || !serverData.resetTimestamp) return;
+    const serverTs = serverData.resetTimestamp;
+    const localTs = getLocalResetTs();
+    if (serverTs > localTs) {
+        // Dashboard provedl reset → smazat hlasy a restartovat kvíz
+        localStorage.setItem('quiz_resetTimestamp', String(serverTs));
+        localStorage.removeItem('quiz_userVotes');
+        location.reload();
+    }
 }
 
 // ─── Server ────────────────────────────────────────────────
@@ -294,6 +311,9 @@ async function init() {
         return;
     }
 
+    // Zkontroluj, jestli dashboard neprovedl reset
+    checkForReset();
+
     // Najdi první nezodpovězenou otázku
     currentQIndex = QUESTIONS_ORDER.length; // default: všechny zodpovězené
     for (let i = 0; i < QUESTIONS_ORDER.length; i++) {
@@ -308,6 +328,12 @@ async function init() {
     } else {
         renderQuestion(QUESTIONS_ORDER[currentQIndex]);
     }
+
+    // Periodicky kontroluj, jestli dashboard neprovedl reset
+    setInterval(async () => {
+        await fetchVotes();
+        checkForReset();
+    }, 5000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

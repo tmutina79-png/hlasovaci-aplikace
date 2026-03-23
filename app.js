@@ -166,6 +166,9 @@ async function resetAll() {
             }
         }
 
+        // Uložit timestamp resetu — kvíz stránky se podle něj restartují
+        fresh.resetTimestamp = Date.now();
+
         const ok = await putData(fresh);
         if (!ok) throw new Error('Reset save failed');
 
