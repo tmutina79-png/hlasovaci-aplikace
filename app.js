@@ -146,6 +146,42 @@ function updateResults(questionId) {
     });
 
     totalEl.textContent = `Celkem hlasů: ${totalVotes}`;
+
+    // Aktualizovat hero políčka v záhlaví
+    updateHeroCards(questionId);
+}
+
+/**
+ * Aktualizace výsledkových políček v záhlaví
+ */
+function updateHeroCards(questionId) {
+    if (!serverData || !serverData.questions[questionId]) return;
+
+    const data = serverData.questions[questionId];
+    // Mapování názvů možností na ID elementů
+    const idMap = {
+        'Ano': 'Ano',
+        'Zkouším': 'Zkouším',
+        'Ne': 'Ne',
+        'Jsem profík :-)': 'profik'
+    };
+
+    data.options.forEach(option => {
+        const elId = `hero-count-${questionId}-${idMap[option] || option}`;
+        const el = document.getElementById(elId);
+        if (!el) return;
+
+        const newCount = data.votes[option];
+        const oldCount = parseInt(el.textContent) || 0;
+
+        if (newCount !== oldCount) {
+            el.textContent = newCount;
+            // Animace při změně
+            el.classList.remove('bump');
+            void el.offsetHeight; // force reflow
+            el.classList.add('bump');
+        }
+    });
 }
 
 /**
