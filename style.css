@@ -122,17 +122,28 @@ body {
 }
 
 .qr-img {
-    width: 160px;
-    height: 160px;
+    width: 200px;
+    height: 200px;
     border-radius: 12px;
     display: block;
     margin: 0 auto 10px;
+    image-rendering: pixelated;
 }
 
 .qr-label {
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--accent-purple);
+    display: block;
+}
+
+.qr-url {
+    display: block;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════
