@@ -150,8 +150,21 @@ body {
 }
 
 .qr-overlay-content {
+    background: white;
+    border-radius: 28px;
+    padding: 40px;
+    width: 90vw;
+    height: 90vh;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
     text-align: center;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.3);
     animation: qrZoomIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: default;
 }
 
 @keyframes qrZoomIn {
@@ -160,27 +173,23 @@ body {
 }
 
 .qr-overlay-img {
-    width: min(80vmin, 500px);
-    height: min(80vmin, 500px);
-    border-radius: 20px;
-    background: white;
-    padding: 24px;
+    width: min(65vh, 65vw, 600px);
+    height: min(65vh, 65vw, 600px);
+    border-radius: 16px;
     image-rendering: pixelated;
 }
 
 .qr-overlay-url {
-    margin-top: 20px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: white;
+    color: var(--accent-purple);
     letter-spacing: 0.02em;
 }
 
 .qr-overlay-hint {
-    margin-top: 8px;
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-muted);
     font-weight: 500;
 }
 
