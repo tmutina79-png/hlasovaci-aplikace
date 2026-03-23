@@ -1,69 +1,132 @@
-// === Hlasovací aplikace ===
+// === Hlasovací aplikace — sdílená databáze přes jsonblob.com ===
 
-// Databáze otázek a hlasů
-const questionsData = {
+// ID sdíleného blobu (všechna zařízení čtou/píší sem)
+const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
+const BLOB_URL = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
+
+// Jak často se obnovují výsledky (v ms) — každé 3 sekundy
+const POLL_INTERVAL = 3000;
+
+// Lokální definice otázek (pro HTML strukturu)
+const questionsConfig = {
     1: {
-        question: "Už jsi někdy vytvořil nějakou aplikaci?",
-        options: ["Ano", "Zkouším", "Ne", "Jsem profík :-)"],
-        votes: {
-            "Ano": 0,
-            "Zkouším": 0,
-            "Ne": 0,
-            "Jsem profík :-)": 0
-        }
+        options: ["Ano", "Zkouším", "Ne", "Jsem profík :-)"]
     }
-    // Sem přidej další otázky ve stejném formátu
 };
 
-// Sledování, zda uživatel už hlasoval
-const userVotes = {};
+// Aktuální data hlasů (načtená ze serveru)
+let serverData = null;
+
+// Sledování, zda uživatel už hlasoval (v localStorage)
+const userVotes = JSON.parse(localStorage.getItem('votingApp_userVotes') || '{}');
+
+// Zámek proti souběžným zápisům
+let isSaving = false;
+
+/**
+ * Načtení hlasů ze serveru
+ */
+async function fetchVotes() {
+    try {
+        const response = await fetch(BLOB_URL, {
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!response.ok) throw new Error('Fetch failed');
+        serverData = await response.json();
+        return serverData;
+    } catch (err) {
+        console.error('Chyba při načítání hlasů:', err);
+        return null;
+    }
+}
+
+/**
+ * Uložení hlasů na server (atomic read-modify-write)
+ */
+async function saveVotesToServer(questionId, answer) {
+    if (isSaving) return false;
+    isSaving = true;
+
+    try {
+        // 1. Načti aktuální stav ze serveru
+        const freshData = await fetchVotes();
+        if (!freshData) throw new Error('Cannot read current data');
+
+        // 2. Přičti hlas
+        freshData.questions[questionId].votes[answer]++;
+
+        // 3. Zapiš zpět
+        const response = await fetch(BLOB_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(freshData)
+        });
+
+        if (!response.ok) throw new Error('Save failed');
+
+        serverData = freshData;
+        return true;
+    } catch (err) {
+        console.error('Chyba při ukládání hlasu:', err);
+        return false;
+    } finally {
+        isSaving = false;
+    }
+}
 
 /**
  * Zpracování hlasu
  */
-function vote(questionId, answer) {
+async function vote(questionId, answer) {
     // Kontrola, zda už uživatel hlasoval v této otázce
-    if (userVotes[questionId]) {
-        return;
-    }
+    if (userVotes[questionId]) return;
 
-    // Zaznamenat hlas
-    questionsData[questionId].votes[answer]++;
-    userVotes[questionId] = answer;
-
-    // Zvýraznit zvolenou odpověď
+    // Zablokuj tlačítka okamžitě (UX feedback)
     const optionsContainer = document.getElementById(`options-${questionId}`);
     const buttons = optionsContainer.querySelectorAll('.option-btn');
-
     buttons.forEach(btn => {
         const label = btn.querySelector('.card__title').textContent;
         if (label === answer) {
-            btn.classList.add('voted');
-            btn.classList.add('vote-animation');
+            btn.classList.add('voted', 'vote-animation');
         } else {
             btn.classList.add('disabled');
         }
     });
 
-    // Aktualizovat výsledky
-    updateResults(questionId);
+    // Uložit na server
+    const success = await saveVotesToServer(questionId, answer);
 
-    // Uložit do localStorage
-    saveVotes();
+    if (success) {
+        // Zaznamenat lokálně, že uživatel hlasoval
+        userVotes[questionId] = answer;
+        localStorage.setItem('votingApp_userVotes', JSON.stringify(userVotes));
+        // Aktualizovat výsledky
+        updateAllResults();
+    } else {
+        // Rollback UI při chybě
+        buttons.forEach(btn => {
+            btn.classList.remove('voted', 'vote-animation', 'disabled');
+        });
+        alert('Chyba při odesílání hlasu. Zkus to znovu.');
+    }
 }
 
 /**
- * Aktualizace zobrazení výsledků
+ * Aktualizace zobrazení výsledků pro jednu otázku
  */
 function updateResults(questionId) {
-    const data = questionsData[questionId];
+    if (!serverData || !serverData.questions[questionId]) return;
+
+    const data = serverData.questions[questionId];
     const resultsListEl = document.getElementById(`results-list-${questionId}`);
     const totalEl = document.getElementById(`total-${questionId}`);
+    if (!resultsListEl || !totalEl) return;
 
-    // Spočítat celkový počet hlasů
     const totalVotes = Object.values(data.votes).reduce((sum, count) => sum + count, 0);
 
-    // Vygenerovat výsledky
     resultsListEl.innerHTML = '';
 
     data.options.forEach(option => {
@@ -82,68 +145,57 @@ function updateResults(questionId) {
         resultsListEl.appendChild(resultItem);
     });
 
-    // Celkový počet
     totalEl.textContent = `Celkem hlasů: ${totalVotes}`;
 }
 
 /**
- * Uložení hlasů do localStorage
+ * Aktualizace všech otázek
  */
-function saveVotes() {
-    localStorage.setItem('votingApp_votes', JSON.stringify(questionsData));
-    localStorage.setItem('votingApp_userVotes', JSON.stringify(userVotes));
+function updateAllResults() {
+    if (!serverData) return;
+    for (const questionId in serverData.questions) {
+        updateResults(questionId);
+    }
 }
 
 /**
- * Načtení hlasů z localStorage
+ * Zvýraznění tlačítek u otázek, kde uživatel už hlasoval
  */
-function loadVotes() {
-    const savedVotes = localStorage.getItem('votingApp_votes');
-    const savedUserVotes = localStorage.getItem('votingApp_userVotes');
-
-    if (savedVotes) {
-        const parsed = JSON.parse(savedVotes);
-        // Aktualizovat hlasy pro existující otázky
-        for (const id in parsed) {
-            if (questionsData[id]) {
-                questionsData[id].votes = parsed[id].votes;
+function highlightUserVotes() {
+    for (const questionId in userVotes) {
+        const optionsContainer = document.getElementById(`options-${questionId}`);
+        if (!optionsContainer) continue;
+        const buttons = optionsContainer.querySelectorAll('.option-btn');
+        buttons.forEach(btn => {
+            const label = btn.querySelector('.card__title').textContent;
+            if (label === userVotes[questionId]) {
+                btn.classList.add('voted');
+            } else {
+                btn.classList.add('disabled');
             }
-        }
+        });
     }
+}
 
-    if (savedUserVotes) {
-        const parsed = JSON.parse(savedUserVotes);
-        Object.assign(userVotes, parsed);
-    }
+/**
+ * Pravidelné obnovování výsledků ze serveru (polling)
+ */
+async function pollResults() {
+    await fetchVotes();
+    updateAllResults();
 }
 
 /**
  * Inicializace aplikace
  */
-function init() {
-    // Načíst uložené hlasy
-    loadVotes();
+async function init() {
+    // Načíst hlasy ze serveru
+    await fetchVotes();
+    updateAllResults();
+    highlightUserVotes();
 
-    // Pro každou otázku zobrazit výsledky a stav tlačítek
-    for (const questionId in questionsData) {
-        updateResults(questionId);
-
-        // Pokud uživatel už hlasoval, zvýraznit jeho volbu
-        if (userVotes[questionId]) {
-            const optionsContainer = document.getElementById(`options-${questionId}`);
-            if (optionsContainer) {
-                const buttons = optionsContainer.querySelectorAll('.option-btn');
-                buttons.forEach(btn => {
-                    const label = btn.querySelector('.card__title').textContent;
-                    if (label === userVotes[questionId]) {
-                        btn.classList.add('voted');
-                    } else {
-                        btn.classList.add('disabled');
-                    }
-                });
-            }
-        }
-    }
+    // Spustit polling — výsledky se automaticky obnovují
+    setInterval(pollResults, POLL_INTERVAL);
 }
 
 // Spustit aplikaci po načtení stránky
