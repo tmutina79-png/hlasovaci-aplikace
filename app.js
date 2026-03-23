@@ -1,7 +1,9 @@
 // === Dashboard — živé výsledky na tabuli ===
 
 const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
-const BLOB_URL = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
+const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
+// CORS proxy — jsonblob.com nemá CORS hlavičky, proxy je přidá
+const BLOB_URL = `https://corsproxy.io/?url=${encodeURIComponent(BLOB_RAW)}`;
 const POLL_INTERVAL = 2000; // 2s pro živý pocit
 
 // ─── Konfigurace otázek (titulky, barvy) ───────────────────
