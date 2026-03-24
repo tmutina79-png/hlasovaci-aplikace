@@ -1,10 +1,10 @@
 // === Dashboard — živé výsledky na tabuli ===
+// v2: Agreguje hlasy z individuálních voterů (voters objekt)
 
 const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
 const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
-// CORS proxy — jsonblob.com nemá CORS hlavičky, proxy je přidá
 const BLOB_URL = `https://corsproxy.io/?url=${BLOB_RAW}`;
-const POLL_INTERVAL = 2000; // 2s pro živý pocit
+const POLL_INTERVAL = 2000;
 
 // ─── Konfigurace otázek (titulky, barvy) ───────────────────
 const QUESTIONS = {
@@ -20,7 +20,6 @@ let serverData = null;
 let dashboardBuilt = false;
 
 // ─── Komunikace se serverem ────────────────────────────────
-// Zkusí proxy, pak přímo (localhost funguje bez proxy)
 const FETCH_URLS = [BLOB_URL, BLOB_RAW];
 
 async function fetchFrom(url, options = {}) {
@@ -34,6 +33,7 @@ async function fetchVotes() {
         try {
             const res = await fetchFrom(url);
             serverData = await res.json();
+            if (!serverData.voters) serverData.voters = {};
             return serverData;
         } catch (err) {
             console.warn(`Fetch z ${url.slice(0, 40)}… selhal:`, err.message);
@@ -46,7 +46,7 @@ async function fetchVotes() {
 async function putData(data) {
     for (const url of FETCH_URLS) {
         try {
-            const res = await fetchFrom(url, {
+            await fetchFrom(url, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -57,6 +57,28 @@ async function putData(data) {
         }
     }
     return false;
+}
+
+// ─── Agregace hlasů z voters ───────────────────────────────
+// Spočítá hlasy pro každou otázku z individuálních záznamů voterů
+function aggregateVotes(qId) {
+    const voters = serverData?.voters || {};
+    const data = serverData?.questions[qId];
+    if (!data) return {};
+
+    // Inicializovat počty na 0
+    const counts = {};
+    data.options.forEach(opt => counts[opt] = 0);
+
+    // Projít všechny votery
+    for (const uuid in voters) {
+        const voterAnswer = voters[uuid][qId];
+        if (voterAnswer && counts.hasOwnProperty(voterAnswer)) {
+            counts[voterAnswer]++;
+        }
+    }
+
+    return counts;
 }
 
 // ─── Sestavení dashboard karet ─────────────────────────────
@@ -70,7 +92,8 @@ function buildDashboard() {
         const data = serverData.questions[qId];
         if (!data) continue;
 
-        const totalVotes = Object.values(data.votes).reduce((s, c) => s + c, 0);
+        const counts = aggregateVotes(qId);
+        const totalVotes = Object.values(counts).reduce((s, c) => s + c, 0);
 
         html += `<section class="dash-card" id="dash-${qId}">`;
         html += `  <div class="dash-header">`;
@@ -81,7 +104,7 @@ function buildDashboard() {
         html += `  <div class="dash-bars">`;
 
         data.options.forEach((option, idx) => {
-            const count = data.votes[option];
+            const count = counts[option] || 0;
             const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
 
             html += `<div class="bar-row">`;
@@ -108,20 +131,16 @@ function updateDashboard() {
         return;
     }
 
-    let totalRespondents = 0;
-
     for (const qId in serverData.questions) {
         const data = serverData.questions[qId];
-        const totalVotes = Object.values(data.votes).reduce((s, c) => s + c, 0);
-        if (qId === "1") totalRespondents = totalVotes;
+        const counts = aggregateVotes(qId);
+        const totalVotes = Object.values(counts).reduce((s, c) => s + c, 0);
 
-        // Aktualizovat počet hlasů
         const countEl = document.getElementById(`count-${qId}`);
         if (countEl) countEl.textContent = `${totalVotes} hlasů`;
 
-        // Aktualizovat bary
         data.options.forEach((option, idx) => {
-            const count = data.votes[option];
+            const count = counts[option] || 0;
             const pct = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
 
             const fill = document.getElementById(`fill-${qId}-${idx}`);
@@ -131,7 +150,6 @@ function updateDashboard() {
                 const oldPct = parseFloat(fill.style.width) || 0;
                 fill.style.width = `${pct}%`;
 
-                // Pulzní animace při změně
                 if (Math.abs(pct - oldPct) > 0.5) {
                     fill.classList.add('bar-pulse');
                     setTimeout(() => fill.classList.remove('bar-pulse'), 500);
@@ -140,10 +158,6 @@ function updateDashboard() {
             if (val) val.textContent = `${count} (${Math.round(pct)}%)`;
         });
     }
-
-    // Aktualizovat počet respondentů
-    const el = document.getElementById('respondent-count');
-    if (el) el.textContent = totalRespondents;
 }
 
 // ─── Polling ───────────────────────────────────────────────
@@ -160,13 +174,10 @@ async function resetAll() {
         const fresh = await fetchVotes();
         if (!fresh) return;
 
-        for (const qId in fresh.questions) {
-            for (const opt of fresh.questions[qId].options) {
-                fresh.questions[qId].votes[opt] = 0;
-            }
-        }
+        // Smazat všechny votery (individuální hlasy)
+        fresh.voters = {};
 
-        // Uložit timestamp resetu — kvíz stránky se podle něj restartují
+        // Timestamp resetu
         fresh.resetTimestamp = Date.now();
 
         const ok = await putData(fresh);
