@@ -19,24 +19,28 @@ const QUESTIONS = {
 let serverData = null;
 let dashboardBuilt = false;
 
-// ─── Komunikace se serverem ────────────────────────────────
-const FETCH_URLS = [BLOB_URL, BLOB_RAW];
-
-async function fetchFrom(url, options = {}) {
-    const res = await fetch(url, { ...options, headers: { 'Accept': 'application/json', ...options.headers } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res;
+// ─── Komunikace se serverem (cache-busting) ───────────────
+function getFetchUrls() {
+    const t = Date.now();
+    return [
+        BLOB_URL + '&_=' + t,
+        BLOB_RAW + '?_=' + t
+    ];
 }
 
 async function fetchVotes() {
-    for (const url of FETCH_URLS) {
+    for (const url of getFetchUrls()) {
         try {
-            const res = await fetchFrom(url);
+            const res = await fetch(url, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             serverData = await res.json();
             if (!serverData.voters) serverData.voters = {};
             return serverData;
         } catch (err) {
-            console.warn(`Fetch z ${url.slice(0, 40)}… selhal:`, err.message);
+            console.warn('Fetch selhal:', err.message);
         }
     }
     console.error('Všechny pokusy o načtení dat selhaly');
@@ -44,16 +48,18 @@ async function fetchVotes() {
 }
 
 async function putData(data) {
-    for (const url of FETCH_URLS) {
+    for (const url of [BLOB_URL, BLOB_RAW]) {
         try {
-            await fetchFrom(url, {
+            const res = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(data)
             });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             return true;
         } catch (err) {
-            console.warn(`PUT na ${url.slice(0, 40)}… selhal:`, err.message);
+            console.warn('PUT selhal:', err.message);
         }
     }
     return false;

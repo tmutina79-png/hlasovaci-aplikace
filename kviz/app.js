@@ -1,5 +1,5 @@
 // === Kvíz — studentská stránka (jedna otázka najednou) ===
-// v2: Každý žák zapisuje pod svým UUID → žádné přepisování cizích hlasů
+// v3: Cache-busting, agresivní sync, spolehlivý auto-reset
 
 const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
 const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
@@ -52,14 +52,13 @@ function getOrCreateUuid() {
     return uuid;
 }
 
-const MY_UUID = getOrCreateUuid();
+let MY_UUID = getOrCreateUuid();
 
 // ─── Stav ──────────────────────────────────────────────────
 let serverData = null;
 let currentQIndex = 0;
 let hasChangedCurrent = false;
 
-// Lokální hlasy: { "1": "Ano", "2": "Ne", ... }
 let userVotes = JSON.parse(localStorage.getItem('quiz_userVotes') || '{}');
 
 function saveUserVotes() {
@@ -71,124 +70,125 @@ function getLocalResetTs() {
     return parseInt(localStorage.getItem('quiz_resetTimestamp') || '0');
 }
 
+// Vrátí true pokud byl detekován reset → volající MUSÍ udělat reload
 function checkForReset() {
     if (!serverData) return false;
-    let resetDetected = false;
 
-    // Metoda 1: resetTimestamp se změnil
-    if (serverData.resetTimestamp) {
-        const serverTs = serverData.resetTimestamp;
-        const localTs = getLocalResetTs();
-        if (serverTs > localTs) {
-            resetDetected = true;
-        }
+    const serverTs = serverData.resetTimestamp || 0;
+    const localTs = getLocalResetTs();
+
+    // Metoda 1: resetTimestamp na serveru je novější než náš lokální
+    if (serverTs > 0 && serverTs > localTs) {
+        doLocalReset(serverTs);
+        return true;
     }
 
-    // Metoda 2: server nemá žádné votery, ale uživatel má lokální hlasy
-    if (!resetDetected && Object.keys(userVotes).length > 0) {
+    // Metoda 2: server nemá žádné votery, ale my máme lokální hlasy
+    if (Object.keys(userVotes).length > 0) {
         const voters = serverData.voters || {};
         if (Object.keys(voters).length === 0) {
-            resetDetected = true;
+            doLocalReset(serverTs);
+            return true;
         }
     }
 
-    if (resetDetected) {
-        localStorage.removeItem('quiz_userVotes');
-        localStorage.removeItem('quiz_uuid');
-        userVotes = {};
-        currentQIndex = 0;
-        hasChangedCurrent = false;
-        if (serverData.resetTimestamp) {
-            localStorage.setItem('quiz_resetTimestamp', String(serverData.resetTimestamp));
-        }
-    }
-
-    return resetDetected;
+    return false;
 }
 
-// ─── Server ────────────────────────────────────────────────
-const FETCH_URLS = [BLOB_URL, BLOB_RAW];
+function doLocalReset(serverTs) {
+    console.log('🔄 Reset detekován — mažu lokální data');
+    localStorage.removeItem('quiz_userVotes');
+    localStorage.removeItem('quiz_uuid');
+    if (serverTs > 0) {
+        localStorage.setItem('quiz_resetTimestamp', String(serverTs));
+    }
+    // Po reloadu se vytvoří nový UUID a prázdné userVotes
+}
 
-async function fetchFrom(url, options = {}) {
-    const res = await fetch(url, { ...options, headers: { 'Accept': 'application/json', ...options.headers } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res;
+// ─── Server — cache-busting na každém požadavku ────────────
+function getFetchUrls() {
+    const t = Date.now();
+    return [
+        BLOB_URL + '&_=' + t,
+        BLOB_RAW + '?_=' + t
+    ];
 }
 
 async function fetchVotes() {
-    for (const url of FETCH_URLS) {
+    for (const url of getFetchUrls()) {
         try {
-            const res = await fetchFrom(url);
+            const res = await fetch(url, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             serverData = await res.json();
             if (!serverData.voters) serverData.voters = {};
             return serverData;
         } catch (err) {
-            console.warn(`Fetch z ${url.slice(0, 40)}… selhal:`, err.message);
+            console.warn('Fetch selhal:', err.message);
         }
     }
-    console.error('Všechny pokusy o načtení dat selhaly');
     return null;
 }
 
 async function putData(data) {
-    for (const url of FETCH_URLS) {
+    const urls = [BLOB_URL, BLOB_RAW];
+    for (const url of urls) {
         try {
-            await fetchFrom(url, {
+            const res = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(data)
             });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             return true;
         } catch (err) {
-            console.warn(`PUT na ${url.slice(0, 40)}… selhal:`, err.message);
+            console.warn('PUT selhal:', err.message);
         }
     }
     return false;
 }
 
-// ─── Odeslání hlasu — retry loop s verifikací ──────────────
-// Každý žák píše pod svým UUID → i když dva zapíšou naráz,
-// pozdější zápis přečte data VČETNĚ předchozího UUID a nic nepřepíše.
+// ─── Odeslání hlasu ────────────────────────────────────────
+// Zapisuje VŠECHNY lokální hlasy najednou (ne jen aktuální),
+// takže i dříve ztracené hlasy se obnoví.
 async function sendVote(questionId, answer) {
-    const MAX_RETRIES = 6;
+    // Náhodné zpoždění 0–2s — rozloží souběžné zápisy
+    await new Promise(r => setTimeout(r, Math.random() * 2000));
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        const delay = attempt === 0
-            ? Math.floor(Math.random() * 800)
-            : 300 * attempt + Math.random() * 500;
-        await new Promise(r => setTimeout(r, delay));
+    try {
+        const fresh = await fetchVotes();
+        if (!fresh) return false;
 
-        try {
-            const fresh = await fetchVotes();
-            if (!fresh) continue;
+        if (!fresh.voters) fresh.voters = {};
+        if (!fresh.voters[MY_UUID]) fresh.voters[MY_UUID] = {};
 
-            if (!fresh.voters) fresh.voters = {};
-            if (!fresh.voters[MY_UUID]) fresh.voters[MY_UUID] = {};
-            fresh.voters[MY_UUID][questionId] = answer;
-
-            const ok = await putData(fresh);
-            if (!ok) continue;
-
-            // Verifikovat
-            await new Promise(r => setTimeout(r, 150 + Math.random() * 250));
-            const verify = await fetchVotes();
-            if (verify && verify.voters && verify.voters[MY_UUID] &&
-                verify.voters[MY_UUID][questionId] === answer) {
-                serverData = verify;
-                return true;
-            }
-
-            console.warn(`Hlas ztracen (pokus ${attempt + 1}), zkouším znovu…`);
-        } catch (err) {
-            console.warn(`Chyba (pokus ${attempt + 1}):`, err.message);
+        // Zapsat VŠECHNY lokální hlasy, ne jen ten aktuální
+        for (const qId in userVotes) {
+            fresh.voters[MY_UUID][qId] = userVotes[qId];
         }
-    }
 
-    console.error('Nepodařilo se odeslat hlas po', MAX_RETRIES, 'pokusech');
-    return false;
+        const ok = await putData(fresh);
+        if (!ok) return false;
+
+        // Krátká verifikace
+        await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+        const verify = await fetchVotes();
+        if (verify?.voters?.[MY_UUID]?.[questionId] === answer) {
+            return true;
+        }
+
+        console.warn('Hlas neověřen, backgroundSync to opraví');
+        return false;
+    } catch (err) {
+        console.warn('sendVote chyba:', err.message);
+        return false;
+    }
 }
 
-// ─── Pozadí: synchronizace neodeslaných hlasů ──────────────
+// ─── Background sync — každé 3s kontrola + dosync ─────────
 async function backgroundSync() {
     if (Object.keys(userVotes).length === 0) return;
 
@@ -196,38 +196,33 @@ async function backgroundSync() {
         const fresh = await fetchVotes();
         if (!fresh) return;
 
-        const myServerVotes = (fresh.voters && fresh.voters[MY_UUID]) || {};
-        let needsSync = false;
-
+        const myServer = (fresh.voters && fresh.voters[MY_UUID]) || {};
+        let allOk = true;
         for (const qId in userVotes) {
-            if (myServerVotes[qId] !== userVotes[qId]) {
-                needsSync = true;
-                break;
-            }
+            if (myServer[qId] !== userVotes[qId]) { allOk = false; break; }
         }
+        if (allOk) return;
 
-        if (needsSync) {
-            console.log('Background sync: doplňuji chybějící hlasy…');
-            if (!fresh.voters) fresh.voters = {};
-            fresh.voters[MY_UUID] = { ...userVotes };
-            await putData(fresh);
+        console.log('↑ Background sync: doplňuji chybějící hlasy…');
+        if (!fresh.voters) fresh.voters = {};
+        if (!fresh.voters[MY_UUID]) fresh.voters[MY_UUID] = {};
+        for (const qId in userVotes) {
+            fresh.voters[MY_UUID][qId] = userVotes[qId];
         }
+        await putData(fresh);
     } catch (err) {
-        console.warn('Background sync selhal:', err.message);
+        console.warn('Sync selhal:', err.message);
     }
 }
 
 // ─── Progress ──────────────────────────────────────────────
 function updateProgress() {
     const total = QUESTIONS_ORDER.length;
-    const answered = QUESTIONS_ORDER.filter(q => userVotes[q]).length;
-    const pct = (answered / total) * 100;
-
     const fill = document.getElementById('progress-fill');
     const label = document.getElementById('progress-label');
-
-    if (fill) fill.style.width = `${pct}%`;
-    if (label) label.textContent = `Otázka ${currentQIndex + 1} / ${total}`;
+    const answered = QUESTIONS_ORDER.filter(q => userVotes[q]).length;
+    if (fill) fill.style.width = (answered / total * 100) + '%';
+    if (label) label.textContent = 'Otázka ' + (currentQIndex + 1) + ' / ' + total;
 }
 
 // ─── Renderování otázky ────────────────────────────────────
@@ -240,66 +235,60 @@ function renderQuestion(qId) {
     updateProgress();
 
     const area = document.getElementById('quiz-area');
+    area.style.display = '';
+    const hdr = document.querySelector('.quiz-header');
+    if (hdr) hdr.style.display = '';
+
     const isStars = cfg.isStars;
     const existingVote = userVotes[qId];
 
-    let html = `<div class="question-slide">`;
-    html += `  <div class="quiz-question-tag"><span class="tag tag--${cfg.tagColor}">${cfg.tag}</span></div>`;
-    html += `  <h2 class="quiz-title">${cfg.title}</h2>`;
-    html += `  <div class="quiz-options${isStars ? ' quiz-options--stars' : ''}">`;
+    let html = '<div class="question-slide">';
+    html += '  <div class="quiz-question-tag"><span class="tag tag--' + cfg.tagColor + '">' + cfg.tag + '</span></div>';
+    html += '  <h2 class="quiz-title">' + cfg.title + '</h2>';
+    html += '  <div class="quiz-options' + (isStars ? ' quiz-options--stars' : '') + '">';
 
-    data.options.forEach((option, idx) => {
+    data.options.forEach(function(option, idx) {
         const icon = cfg.icons[option] || '📌';
         const starClass = isStars ? ' quiz-option--star' : '';
-
         let stateClass = '';
         if (existingVote) {
-            if (option === existingVote) stateClass = ' selected';
-            else stateClass = ' locked';
+            stateClass = (option === existingVote) ? ' selected' : ' locked';
         }
-
         const safeAnswer = encodeURIComponent(option);
-
-        html += `<button class="quiz-option${starClass}${stateClass}" data-answer="${safeAnswer}" onclick="selectAnswer('${qId}', decodeURIComponent(this.dataset.answer))">`;
-
+        html += '<button class="quiz-option' + starClass + stateClass + '" data-answer="' + safeAnswer + '" onclick="selectAnswer(\'' + qId + '\', decodeURIComponent(this.dataset.answer))">';
         if (isStars) {
-            const starCount = idx + 1;
-            html += `  <span class="quiz-option-icon">${'⭐'.repeat(starCount)}</span>`;
-            html += `  <span class="quiz-option-label">${starCount}</span>`;
+            html += '<span class="quiz-option-icon">' + '⭐'.repeat(idx + 1) + '</span>';
+            html += '<span class="quiz-option-label">' + (idx + 1) + '</span>';
         } else {
-            html += `  <span class="quiz-option-icon">${icon}</span>`;
-            html += `  <span class="quiz-option-label">${option}</span>`;
+            html += '<span class="quiz-option-icon">' + icon + '</span>';
+            html += '<span class="quiz-option-label">' + option + '</span>';
         }
-
-        html += `</button>`;
+        html += '</button>';
     });
 
-    html += `</div>`;
-    html += `<div class="quiz-confirm${existingVote ? ' visible' : ''}" id="confirm-msg">✓ Odpověď odeslána</div>`;
+    html += '</div>';
+    html += '<div class="quiz-confirm' + (existingVote ? ' visible' : '') + '" id="confirm-msg">✓ Odpověď odeslána</div>';
 
     const isLast = currentQIndex >= QUESTIONS_ORDER.length - 1;
     const nextLabel = isLast ? '🎉 Dokončit' : 'Další otázka →';
-    html += `<button class="quiz-next${existingVote ? ' visible' : ''}" id="next-btn" onclick="goNext()">${nextLabel}</button>`;
+    html += '<button class="quiz-next' + (existingVote ? ' visible' : '') + '" id="next-btn" onclick="goNext()">' + nextLabel + '</button>';
+    html += '</div>';
 
-    html += `</div>`;
     area.innerHTML = html;
 }
 
 // ─── Hlasování — optimistický zápis ────────────────────────
 async function selectAnswer(qId, answer) {
     const existing = userVotes[qId];
-
     if (existing && hasChangedCurrent) return;
     if (existing === answer) return;
 
     const isChange = !!existing;
 
-    // Okamžitý vizuální feedback
     const buttons = document.querySelectorAll('.quiz-option');
-    buttons.forEach(btn => {
+    buttons.forEach(function(btn) {
         const btnAnswer = decodeURIComponent(btn.dataset.answer);
         btn.classList.remove('selected', 'dimmed', 'locked', 'can-change');
-
         if (btnAnswer === answer) {
             btn.classList.add('selected');
             if (!isChange) btn.classList.add('can-change');
@@ -316,35 +305,29 @@ async function selectAnswer(qId, answer) {
     }
     if (nextBtn) nextBtn.classList.add('visible');
 
-    // Optimisticky uložit do localStorage HNED (uživatel nečeká na server)
+    // Uložit lokálně HNED
     userVotes[qId] = answer;
     saveUserVotes();
     if (isChange) hasChangedCurrent = true;
     updateProgress();
 
-    // Server sync na pozadí — neblokuje UI
-    sendVote(qId, answer).then(success => {
-        if (!success) {
-            console.warn('Server sync selhal, backgroundSync to dožene');
-        }
+    // Server na pozadí
+    sendVote(qId, answer).then(function(ok) {
+        if (!ok) console.warn('Server sync selhal, backgroundSync to dožene');
     });
 }
 
-// ─── Další otázka ──────────────────────────────────────────
+// ─── Navigace ──────────────────────────────────────────────
 function goNext() {
     currentQIndex++;
-
     if (currentQIndex >= QUESTIONS_ORDER.length) {
         showDone();
         return;
     }
-
     const slide = document.querySelector('.question-slide');
     if (slide) {
         slide.classList.add('exiting');
-        setTimeout(() => {
-            renderQuestion(QUESTIONS_ORDER[currentQIndex]);
-        }, 300);
+        setTimeout(function() { renderQuestion(QUESTIONS_ORDER[currentQIndex]); }, 300);
     } else {
         renderQuestion(QUESTIONS_ORDER[currentQIndex]);
     }
@@ -353,15 +336,44 @@ function goNext() {
 // ─── Hotovo ────────────────────────────────────────────────
 function showDone() {
     document.getElementById('quiz-area').style.display = 'none';
-    document.querySelector('.quiz-header').style.display = 'none';
+    var hdr = document.querySelector('.quiz-header');
+    if (hdr) hdr.style.display = 'none';
 
-    const progressBar = document.querySelector('.progress-bar');
+    var progressBar = document.querySelector('.progress-bar');
     if (progressBar) {
-        const fill = progressBar.querySelector('.progress-fill');
+        var fill = progressBar.querySelector('.progress-fill');
         if (fill) fill.style.width = '100%';
     }
 
     document.getElementById('done-screen').classList.add('visible');
+
+    // Agresivní sync po dokončení — žák může kdykoliv zavřít telefon
+    backgroundSync();
+    setTimeout(backgroundSync, 2000);
+    setTimeout(backgroundSync, 5000);
+    setTimeout(backgroundSync, 10000);
+}
+
+// ─── Restart kvízu (po resetu z dashboardu) ────────────────
+// Vrátí stránku do výchozího stavu BEZ reloadu stránky.
+function restartQuiz() {
+    // Nový UUID
+    MY_UUID = getOrCreateUuid();
+    userVotes = {};
+    currentQIndex = 0;
+    hasChangedCurrent = false;
+
+    // Schovat done screen, zobrazit quiz
+    var doneScreen = document.getElementById('done-screen');
+    if (doneScreen) doneScreen.classList.remove('visible');
+
+    var quizArea = document.getElementById('quiz-area');
+    if (quizArea) quizArea.style.display = '';
+
+    var hdr = document.querySelector('.quiz-header');
+    if (hdr) hdr.style.display = '';
+
+    renderQuestion(QUESTIONS_ORDER[0]);
 }
 
 // ─── Inicializace ──────────────────────────────────────────
@@ -373,31 +385,41 @@ async function init() {
         return;
     }
 
-    checkForReset();
+    // Pokud byl detekován reset → vyčistit a restartovat
+    if (checkForReset()) {
+        // localStorage je vyčištěný, ale stránka ještě zobrazuje starý stav.
+        // Místo location.reload vytvoříme nový UUID a restartujeme kvíz in-place.
+        restartQuiz();
+        // Nereturni — pokračuj do setInterval
+    } else {
+        // Najít první nezodpovězenou otázku
+        currentQIndex = QUESTIONS_ORDER.length;
+        for (var i = 0; i < QUESTIONS_ORDER.length; i++) {
+            if (!userVotes[QUESTIONS_ORDER[i]]) {
+                currentQIndex = i;
+                break;
+            }
+        }
 
-    currentQIndex = QUESTIONS_ORDER.length;
-    for (let i = 0; i < QUESTIONS_ORDER.length; i++) {
-        if (!userVotes[QUESTIONS_ORDER[i]]) {
-            currentQIndex = i;
-            break;
+        if (currentQIndex >= QUESTIONS_ORDER.length) {
+            showDone();
+        } else {
+            renderQuestion(QUESTIONS_ORDER[currentQIndex]);
         }
     }
 
-    if (currentQIndex >= QUESTIONS_ORDER.length) {
-        showDone();
-    } else {
-        renderQuestion(QUESTIONS_ORDER[currentQIndex]);
-    }
-
-    // Periodicky: kontrola resetu + background sync
-    setInterval(async () => {
+    // Periodická kontrola resetu + sync (každé 3 sekundy)
+    setInterval(async function() {
         await fetchVotes();
+
         if (checkForReset()) {
-            location.reload();
+            // Reset detekován → restartovat kvíz bez nutnosti manuálního refreshe
+            restartQuiz();
             return;
         }
+
         await backgroundSync();
-    }, 8000);
+    }, 3000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
