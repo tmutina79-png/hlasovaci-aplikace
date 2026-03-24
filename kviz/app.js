@@ -277,30 +277,26 @@ function renderQuestion(qId) {
     area.innerHTML = html;
 }
 
-// ─── Hlasování — optimistický zápis ────────────────────────
+// ─── Hlasování — jeden hlas na otázku, bez možnosti změny ──
 async function selectAnswer(qId, answer) {
-    const existing = userVotes[qId];
-    if (existing && hasChangedCurrent) return;
-    if (existing === answer) return;
-
-    const isChange = !!existing;
+    // Pokud už je odpověď na tuto otázku, ignoruj
+    if (userVotes[qId]) return;
 
     const buttons = document.querySelectorAll('.quiz-option');
     buttons.forEach(function(btn) {
         const btnAnswer = decodeURIComponent(btn.dataset.answer);
-        btn.classList.remove('selected', 'dimmed', 'locked', 'can-change');
+        btn.classList.remove('selected', 'dimmed', 'locked');
         if (btnAnswer === answer) {
             btn.classList.add('selected');
-            if (!isChange) btn.classList.add('can-change');
         } else {
-            btn.classList.add(isChange ? 'locked' : 'dimmed');
+            btn.classList.add('locked');
         }
     });
 
     const confirmEl = document.getElementById('confirm-msg');
     const nextBtn = document.getElementById('next-btn');
     if (confirmEl) {
-        confirmEl.textContent = isChange ? '✓ Odpověď změněna' : '✓ Odpověď odeslána';
+        confirmEl.textContent = '✓ Odpověď odeslána';
         confirmEl.classList.add('visible');
     }
     if (nextBtn) nextBtn.classList.add('visible');
@@ -308,7 +304,6 @@ async function selectAnswer(qId, answer) {
     // Uložit lokálně HNED
     userVotes[qId] = answer;
     saveUserVotes();
-    if (isChange) hasChangedCurrent = true;
     updateProgress();
 
     // Server na pozadí
