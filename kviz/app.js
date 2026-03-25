@@ -1,7 +1,7 @@
 // === Kvíz — studentská stránka (jedna otázka najednou) ===
 // v3: Cache-busting, agresivní sync, spolehlivý auto-reset
 
-const BLOB_ID = '019d1c02-916b-7907-9cfb-01589a2bd5a5';
+const BLOB_ID = '019d25fc-07a8-77c1-9fa6-2de2ce5721dc';
 const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
 const BLOB_URL = `https://corsproxy.io/?url=${BLOB_RAW}`;
 
