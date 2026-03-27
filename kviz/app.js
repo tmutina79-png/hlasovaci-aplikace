@@ -1,9 +1,44 @@
 // === Kvíz — studentská stránka (jedna otázka najednou) ===
 // v3: Cache-busting, agresivní sync, spolehlivý auto-reset
 
-const BLOB_ID = '019d25fc-07a8-77c1-9fa6-2de2ce5721dc';
-const BLOB_RAW = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
-const BLOB_URL = `https://corsproxy.io/?url=${BLOB_RAW}`;
+const DEFAULT_BLOB_ID = '019d2ed5-bf7f-72a5-bea3-18762dfc4189';
+const BLOB_API_BASE = 'https://jsonblob.com/api/jsonBlob/';
+const CORS_PROXY = 'https://corsproxy.io/?url=';
+const BLOB_ID_STORAGE_KEY = 'hlasovani_blob_id';
+
+function getBlobIdFromUrl() {
+    try {
+        return new URL(window.location.href).searchParams.get('blob');
+    } catch {
+        return null;
+    }
+}
+
+function setBlobIdInUrl(blobId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('blob', blobId);
+    window.history.replaceState(null, '', url);
+}
+
+function getActiveBlobId() {
+    return getBlobIdFromUrl() || localStorage.getItem(BLOB_ID_STORAGE_KEY) || DEFAULT_BLOB_ID;
+}
+
+function setActiveBlobId(blobId) {
+    localStorage.setItem(BLOB_ID_STORAGE_KEY, blobId);
+    setBlobIdInUrl(blobId);
+}
+
+let ACTIVE_BLOB_ID = getActiveBlobId();
+setActiveBlobId(ACTIVE_BLOB_ID);
+
+function getBlobRawUrl(blobId = ACTIVE_BLOB_ID) {
+    return `${BLOB_API_BASE}${blobId}`;
+}
+
+function getBlobProxyUrl(blobId = ACTIVE_BLOB_ID) {
+    return `${CORS_PROXY}${encodeURIComponent(getBlobRawUrl(blobId))}`;
+}
 
 // ─── Pořadí a konfigurace otázek ───────────────────────────
 const QUESTIONS_ORDER = ["1", "2", "3", "4", "5", "6"];
@@ -108,19 +143,23 @@ function doLocalReset(serverTs) {
 // ─── Server — cache-busting na každém požadavku ────────────
 function getFetchUrls() {
     const t = Date.now();
+    const raw = getBlobRawUrl(ACTIVE_BLOB_ID);
+    const proxy = getBlobProxyUrl(ACTIVE_BLOB_ID);
     return [
-        BLOB_URL + '&_=' + t,
-        BLOB_RAW + '?_=' + t
+        proxy + '&_=' + t,
+        raw + '?_=' + t
     ];
 }
 
 async function fetchVotes() {
+    let lastStatus = 0;
     for (const url of getFetchUrls()) {
         try {
             const res = await fetch(url, {
                 cache: 'no-store',
                 headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
             });
+            lastStatus = res.status;
             if (!res.ok) throw new Error('HTTP ' + res.status);
             serverData = await res.json();
             if (!serverData.voters) serverData.voters = {};
@@ -129,11 +168,21 @@ async function fetchVotes() {
             console.warn('Fetch selhal:', err.message);
         }
     }
+
+    // Pokud je blob pryč (404), přepni na výchozí blob a obnov stránku.
+    // Tím se automaticky opraví starý odkaz/QR.
+    if (lastStatus === 404 && ACTIVE_BLOB_ID !== DEFAULT_BLOB_ID) {
+        console.warn('jsonblob 404 — přepínám na výchozí session blob…');
+        setActiveBlobId(DEFAULT_BLOB_ID);
+        window.location.reload();
+        return null;
+    }
+
     return null;
 }
 
 async function putData(data) {
-    const urls = [BLOB_URL, BLOB_RAW];
+    const urls = [getBlobProxyUrl(ACTIVE_BLOB_ID), getBlobRawUrl(ACTIVE_BLOB_ID)];
     for (const url of urls) {
         try {
             const res = await fetch(url, {
