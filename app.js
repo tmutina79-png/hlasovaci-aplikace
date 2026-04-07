@@ -1,7 +1,7 @@
 // === Dashboard — živé výsledky na tabuli ===
 // v2: Agreguje hlasy z individuálních voterů (voters objekt)
 
-const DEFAULT_BLOB_ID = '019d2ed5-bf7f-72a5-bea3-18762dfc4189';
+const DEFAULT_BLOB_ID = '019d694b-b3d1-7e71-9af8-0855d892e695';
 const BLOB_API_BASE = 'https://jsonblob.com/api/jsonBlob/';
 const CORS_PROXY = 'https://corsproxy.io/?url=';
 const BLOB_ID_STORAGE_KEY = 'hlasovani_blob_id';
